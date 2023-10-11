@@ -1,6 +1,8 @@
+import os
 from typing import Any, Dict, List, Tuple
 
 import hydra
+import pandas as pd
 import rootutils
 from lightning import LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
@@ -46,6 +48,7 @@ def evaluate(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     :return: Tuple[dict, dict] with metrics and dict with all instantiated objects.
     """
     assert cfg.ckpt_path
+    assert cfg.data_dir
 
     log.info(f"Instantiating datamodule <{cfg.data._target_}>")
     datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
@@ -72,10 +75,14 @@ def evaluate(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         log_hyperparameters(object_dict)
 
     log.info("Starting testing!")
-    trainer.test(model=model, datamodule=datamodule, ckpt_path=cfg.ckpt_path)
-
     # for predictions use trainer.predict(...)
-    # predictions = trainer.predict(model=model, dataloaders=dataloaders, ckpt_path=cfg.ckpt_path)
+    predictions = trainer.predict(model=model, datamodule=datamodule, ckpt_path=cfg.ckpt_path)
+    log.info("Creating submission file!")
+    test_df = pd.read_csv(os.path.join(cfg.data_dir, "test.csv"))
+    my_submission = pd.DataFrame({"ID": test_df.ID, "Class": [p.item() for p in predictions]})
+    my_submission.to_csv(
+        os.path.join(os.path.dirname(cfg.ckpt_path), "submission.csv"), index=False
+    )
 
     metric_dict = trainer.callback_metrics
 

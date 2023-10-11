@@ -2,8 +2,8 @@
 
 defaults:
   - _self_
-  - data: mnist # choose datamodule with `test_dataloader()` for evaluation
-  - model: mnist
+  - data: embryo
+  - model: embryo
   - logger: null
   - trainer: default
   - paths: default
@@ -16,3 +16,4 @@ tags: ["dev"]
 
 # passing checkpoint path is necessary for evaluation
 ckpt_path: ???
+data_dir: data/world-championship-2023-embryo-classification/hvwc23
