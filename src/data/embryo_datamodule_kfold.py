@@ -5,13 +5,14 @@ import pandas as pd
 import torch
 from lightning import LightningDataModule
 from PIL import Image
-from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
+from sklearn.model_selection import KFold
+from torch.utils.data import ConcatDataset, DataLoader, Dataset, Subset, random_split
 from torchvision.transforms import transforms
 
 from .embryo_dataset import EmbryoDataset
 
 
-class EmbryoDataModule(LightningDataModule):
+class EmbryoDataModuleKFold(LightningDataModule):
     """`LightningDataModule` for the Embyo dataset.
 
     A `LightningDataModule` implements 7 key methods:
@@ -52,10 +53,12 @@ class EmbryoDataModule(LightningDataModule):
     def __init__(
         self,
         data_dir: str = "data/",
-        val_frac: float = 0.1,
         batch_size: int = 64,
         num_workers: int = 0,
         pin_memory: bool = False,
+        k: int = 1,
+        split_seed: int = 12345,
+        num_splits: int = 3,
         normalize: bool = False,
     ) -> None:
         """Initialize a `EmbryoDataModule`.
@@ -71,6 +74,8 @@ class EmbryoDataModule(LightningDataModule):
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
+
+        assert 0 <= k <= num_splits, "incorrect fold number"
 
         # data transformations
         train_transforms_list = [
@@ -143,12 +148,18 @@ class EmbryoDataModule(LightningDataModule):
                 self.hparams.data_dir, train=False, transform=self.test_transforms
             )
 
-            val_size = int(self.hparams.val_frac * len(trainset))
-            train_size = len(trainset) - val_size
-            self.data_train, self.data_val = random_split(
-                dataset=trainset,
-                lengths=[train_size, val_size],
-                generator=torch.Generator().manual_seed(42),
+            # https://gist.github.com/ashleve/ac511f08c0d29e74566900fd3efbb3ec
+            kf = KFold(
+                n_splits=self.hparams.num_splits,
+                shuffle=True,
+                random_state=self.hparams.split_seed,
+            )
+            all_splits = [k for k in kf.split(trainset)]
+            train_indexes, val_indexes = all_splits[self.hparams.k]
+            train_indexes, val_indexes = train_indexes.tolist(), val_indexes.tolist()
+
+            self.data_train, self.data_val = Subset(trainset, train_indexes), Subset(
+                trainset, val_indexes
             )
 
     def train_dataloader(self) -> DataLoader[Any]:
@@ -216,4 +227,4 @@ class EmbryoDataModule(LightningDataModule):
 
 
 if __name__ == "__main__":
-    _ = EmbryoDataModule()
+    _ = EmbryoDataModuleKFold()

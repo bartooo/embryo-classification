@@ -4,7 +4,7 @@ optimizer:
   _target_: torch.optim.Adam
   _partial_: true
   lr: 0.0001
-  weight_decay: 0.0
+  weight_decay: 0.00001
 
 scheduler:
   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
@@ -14,11 +14,12 @@ scheduler:
   patience: 10
 
 net:
-  _target_: src.models.components.torchvision_resnet50.TorchvisionResNet50
+  _target_: src.models.components.torchvision_resnet18.TorchvisionResNet18
   output_size: 2
   pretrained: true
+  frozen: true
 
-weight: [0.6, 3.4]
+weight: [1.0, 1.0]
 
 # compile model for faster training with pytorch 2.0
 compile: false

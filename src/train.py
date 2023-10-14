@@ -4,6 +4,7 @@ import hydra
 import lightning as L
 import rootutils
 import torch
+import wandb
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
@@ -50,59 +51,77 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     :param cfg: A DictConfig configuration composed by Hydra.
     :return: A tuple with metrics and dict with all instantiated objects.
     """
+
+    avg_metric_dict = {}
+    num_splits = cfg.data.get("num_splits")
+    if num_splits is None:
+        num_splits = 1
+
     # set seed for random number generators in pytorch, numpy and python.random
     if cfg.get("seed"):
         L.seed_everything(cfg.seed, workers=True)
 
-    log.info(f"Instantiating datamodule <{cfg.data._target_}>")
-    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
+    for k in range(num_splits):
+        log.info(f"Instantiating datamodule <{cfg.data._target_}>")
+        if num_splits > 1:
+            cfg.data.k = k
+        datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
 
-    log.info(f"Instantiating model <{cfg.model._target_}>")
-    model: LightningModule = hydra.utils.instantiate(cfg.model)
+        log.info(f"Instantiating model <{cfg.model._target_}>")
+        model: LightningModule = hydra.utils.instantiate(cfg.model)
 
-    log.info("Instantiating callbacks...")
-    callbacks: List[Callback] = instantiate_callbacks(cfg.get("callbacks"))
+        log.info("Instantiating callbacks...")
+        callbacks: List[Callback] = instantiate_callbacks(cfg.get("callbacks"))
 
-    log.info("Instantiating loggers...")
-    logger: List[Logger] = instantiate_loggers(cfg.get("logger"))
+        log.info("Instantiating loggers...")
+        logger: List[Logger] = instantiate_loggers(cfg.get("logger"))
 
-    log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
-    trainer: Trainer = hydra.utils.instantiate(cfg.trainer, callbacks=callbacks, logger=logger)
+        log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
+        trainer: Trainer = hydra.utils.instantiate(cfg.trainer, callbacks=callbacks, logger=logger)
 
-    object_dict = {
-        "cfg": cfg,
-        "datamodule": datamodule,
-        "model": model,
-        "callbacks": callbacks,
-        "logger": logger,
-        "trainer": trainer,
-    }
+        object_dict = {
+            "cfg": cfg,
+            "datamodule": datamodule,
+            "model": model,
+            "callbacks": callbacks,
+            "logger": logger,
+            "trainer": trainer,
+        }
 
-    if logger:
-        log.info("Logging hyperparameters!")
-        log_hyperparameters(object_dict)
+        if logger:
+            log.info("Logging hyperparameters!")
+            log_hyperparameters(object_dict)
 
-    if cfg.get("train"):
-        log.info("Starting training!")
-        trainer.fit(model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path"))
+        if cfg.get("train"):
+            log.info("Starting training!")
+            trainer.fit(model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path"))
 
-    train_metrics = trainer.callback_metrics
+        train_metrics = trainer.callback_metrics
 
-    if cfg.get("test"):
-        log.info("Starting testing!")
-        ckpt_path = trainer.checkpoint_callback.best_model_path
-        if ckpt_path == "":
-            log.warning("Best ckpt not found! Using current weights for testing...")
-            ckpt_path = None
-        trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
-        log.info(f"Best ckpt path: {ckpt_path}")
+        if cfg.get("test"):
+            log.info("Starting testing!")
+            ckpt_path = trainer.checkpoint_callback.best_model_path
+            if ckpt_path == "":
+                log.warning("Best ckpt not found! Using current weights for testing...")
+                ckpt_path = None
+            trainer.validate(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
+            log.info(f"Best ckpt path: {ckpt_path}")
 
-    test_metrics = trainer.callback_metrics
+        test_metrics = trainer.callback_metrics
 
-    # merge train and test metrics
-    metric_dict = {**train_metrics, **test_metrics}
+        # merge train and test metrics
+        metric_dict = {**train_metrics, **test_metrics}
+        if avg_metric_dict:
+            for key, value in metric_dict.items():
+                avg_metric_dict[key] += value
+        else:
+            avg_metric_dict = metric_dict.copy()
 
-    return metric_dict, object_dict
+        if k < num_splits - 1:
+            wandb.finish()
+
+    avg_metric_dict = {key: v / num_splits for key, v in avg_metric_dict.items()}
+    return avg_metric_dict, object_dict
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="train.yaml")

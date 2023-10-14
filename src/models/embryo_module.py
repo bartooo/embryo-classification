@@ -13,7 +13,7 @@ class EmbryoLitModule(LightningModule):
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler._LRScheduler,
         compile: bool,
-        weight: List[float] = [0.6, 3.4],
+        weight: List[float] = [1.0, 1.0],
     ) -> None:
         """
         :param net: The model to train.
@@ -45,13 +45,13 @@ class EmbryoLitModule(LightningModule):
         # for tracking best so far validation accuracy
         self.val_f1_best = MaxMetric()
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, days: torch.Tensor) -> torch.Tensor:
         """Perform a forward pass through the model `self.net`.
 
         :param x: A tensor of images.
         :return: A tensor of logits.
         """
-        return self.net(x)
+        return self.net(x, days)
 
     def on_train_start(self) -> None:
         """Lightning hook that is called when training begins."""
@@ -63,7 +63,7 @@ class EmbryoLitModule(LightningModule):
         self.val_f1_best.reset()
 
     def model_step(
-        self, batch: Tuple[torch.Tensor, torch.Tensor]
+        self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Perform a single model step on a batch of data.
 
@@ -74,14 +74,14 @@ class EmbryoLitModule(LightningModule):
             - A tensor of predictions.
             - A tensor of target labels.
         """
-        x, y = batch
-        logits = self.forward(x)
+        x, y, days = batch
+        logits = self.forward(x, days)
         loss = self.criterion(logits, y)
         preds = torch.argmax(logits, dim=1)
         return loss, preds, y
 
     def training_step(
-        self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
+        self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
         """Perform a single training step on a batch of data from the training set.
 
@@ -107,7 +107,9 @@ class EmbryoLitModule(LightningModule):
         "Lightning hook that is called when a training epoch ends."
         pass
 
-    def validation_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> None:
+    def validation_step(
+        self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor], batch_idx: int
+    ) -> None:
         """Perform a single validation step on a batch of data from the validation set.
 
         :param batch: A batch of data (a tuple) containing the input tensor of images and target
@@ -131,14 +133,15 @@ class EmbryoLitModule(LightningModule):
 
         self.log("val/f1_best", self.val_f1_best.compute(), sync_dist=True, prog_bar=True)
 
-    def predict_step(self, batch: torch.Tensor, batch_idx: int):
+    def predict_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int):
         """Perform a single test step on a batch of data from the test set.
 
         :param batch: A batch of data (a tuple) containing the input tensor of images and target
             labels.
         :param batch_idx: The index of the current batch.
         """
-        logits = self.forward(batch)
+        x, days = batch
+        logits = self.forward(x, days)
         return torch.argmax(logits, dim=1)
 
     def on_test_epoch_end(self) -> None:

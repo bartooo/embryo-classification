@@ -1,0 +1,7 @@
+_target_: src.data.embryo_datamodule_kfold.EmbryoDataModuleKFold
+data_dir: data/world-championship-2023-embryo-classification/hvwc23
+batch_size: 64 # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
+num_workers: 24
+pin_memory: False
+num_splits: 5
+k: 0

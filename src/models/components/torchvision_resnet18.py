@@ -3,7 +3,7 @@ import torchvision.models
 from torch import nn
 
 
-class TorchvisionResNet50(nn.Module):
+class TorchvisionResNet18(nn.Module):
     def __init__(
         self,
         output_size: int = 2,
@@ -15,11 +15,11 @@ class TorchvisionResNet50(nn.Module):
         super().__init__()
 
         if pretrained:
-            self.model = torchvision.models.resnet50(
-                weights=torchvision.models.ResNet50_Weights.IMAGENET1K_V2
+            self.model = torchvision.models.resnet18(
+                weights=torchvision.models.ResNet18_Weights.IMAGENET1K_V1
             )
         else:
-            self.model = torchvision.models.resnet50()
+            self.model = torchvision.models.resnet18()
 
         if frozen:
             for param in self.model.parameters():
@@ -51,4 +51,4 @@ class TorchvisionResNet50(nn.Module):
 
 
 if __name__ == "__main__":
-    _ = TorchvisionResNet50()
+    _ = TorchvisionResNet18()
