@@ -82,8 +82,11 @@ class EmbryoDataModuleKFold(LightningDataModule):
             transforms.Resize((256, 256)),
             transforms.RandomHorizontalFlip(),
             transforms.RandomVerticalFlip(),
-            transforms.RandomRotation(20),
+            transforms.RandomRotation(30),
+            transforms.RandomPerspective(),
+            transforms.ColorJitter(0.1, 0.1, 0.1, 0.1),
             transforms.ToTensor(),
+            transforms.RandomErasing(),
         ]
         if normalize:
             train_transforms_list.append(

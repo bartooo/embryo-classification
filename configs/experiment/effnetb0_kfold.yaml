@@ -1,38 +1,52 @@
 # @package _global_
 
 # to execute this experiment run:
-# python train.py experiment=example
+# python train.py experiment=resnet18
 
 defaults:
-  - override /data: embryo
-  - override /model: embryo
+  - override /data: embryo_kfold
+  - override /model: effnetb0
   - override /callbacks: default
   - override /trainer: default
 
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
 
-tags: ["resnet50"]
+tags: ["effnetb0"]
 
 seed: 12345
 
 trainer:
   min_epochs: 10
-  max_epochs: 200
+  max_epochs: 100
   gradient_clip_val: 0.5
-  log_every_n_steps: 12
+  log_every_n_steps: 11
 
 model:
   optimizer:
-    lr: 0.05
+    lr: 0.00005
+    weight_decay: 0.001
+  net:
+    pretrained: true
+    frozen: true
   compile: false
+  weight: [1.0, 1.0]
 
 data:
-  batch_size: 32
+  batch_size: 128
+  num_splits: 5
+  normalize: true
 
 logger:
   wandb:
     tags: ${tags}
-    # group: "resnet50"
+    group: "effnetb0_5fold_nasa"
   aim:
     experiment: "embryo"
+
+callbacks:
+  early_stopping:
+    patience: 5
+    min_delta: 0.01
+
+optimized_metric: "val/f1_best"

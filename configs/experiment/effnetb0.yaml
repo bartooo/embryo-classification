@@ -1,0 +1,46 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=resnet32
+
+defaults:
+  - override /data: embryo
+  - override /model: effnetb0_full_train
+  - override /callbacks: default_full_train
+  - override /trainer: default
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["effnetb0"]
+
+seed: 12345
+
+trainer:
+  min_epochs: 10
+  max_epochs: 50
+  gradient_clip_val: 0.5
+  log_every_n_steps: 12
+  # limit_val_batches: 0
+
+model:
+  optimizer:
+    lr: 0.00005
+    weight_decay: 0.001
+  net:
+    pretrained: true
+    frozen: true
+  compile: false
+  weight: [1.0, 2.0]
+
+data:
+  batch_size: 128
+  val_frac: 0.1
+  normalize: true
+
+logger:
+  wandb:
+    tags: ${tags}
+    group: "effnetb0_full_train"
+  aim:
+    experiment: "embryo"

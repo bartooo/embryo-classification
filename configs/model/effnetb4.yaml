@@ -11,11 +11,10 @@ scheduler:
   _partial_: true
   mode: min
   factor: 0.1
-  patience: 10
-  verbose: true
+  patience: 5
 
 net:
-  _target_: src.models.components.torchvision_resnet34.TorchvisionResNet34
+  _target_: src.models.components.efficientnetb4.EfficientNetB4
   output_size: 2
   pretrained: true
   frozen: true

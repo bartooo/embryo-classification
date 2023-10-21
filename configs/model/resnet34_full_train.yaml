@@ -7,12 +7,9 @@ optimizer:
   weight_decay: 0.00001
 
 scheduler:
-  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _target_: torch.optim.lr_scheduler.ExponentialLR
   _partial_: true
-  mode: min
-  factor: 0.1
-  patience: 10
-  verbose: true
+  gamma: 0.98
 
 net:
   _target_: src.models.components.torchvision_resnet34.TorchvisionResNet34
