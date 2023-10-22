@@ -79,7 +79,6 @@ class EmbryoDataModule(LightningDataModule):
             transforms.RandomVerticalFlip(),
             transforms.RandomRotation(30),
             transforms.RandomPerspective(),
-            transforms.ColorJitter(0.1, 0.1, 0.1, 0.1),
             transforms.ToTensor(),
             transforms.RandomErasing(),
         ]
