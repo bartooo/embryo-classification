@@ -19,7 +19,11 @@ class EfficientNetB4(nn.Module):
         self.model = EfficientNet.from_pretrained("efficientnet-b4")
         if pretrained:
             url = pmm.util.get_pretrained_microscopynet_url("efficientnet-b4", "image-micronet")
-            self.model.load_state_dict(model_zoo.load_url(url))
+            self.model.load_state_dict(
+                model_zoo.load_url(
+                    url, map_location="cuda" if torch.cuda.is_available() else "cpu"
+                )
+            )
 
         self.day_embedding = nn.Embedding(num_of_days, embedding_dim)
         self.model._fc = nn.Linear(self.model._fc.in_features, self.model._fc.in_features // 2)

@@ -22,7 +22,11 @@ class TorchvisionResNet34(nn.Module):
         )
         if pretrained:
             url = pmm.util.get_pretrained_microscopynet_url("resnet34", "image-micronet")
-            self.model.load_state_dict(model_zoo.load_url(url))
+            self.model.load_state_dict(
+                model_zoo.load_url(
+                    url, map_location="cuda" if torch.cuda.is_available() else "cpu"
+                )
+            )
 
         if frozen:
             for param in self.model.parameters():
