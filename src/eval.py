@@ -1,3 +1,4 @@
+import contextlib
 import os
 from typing import Any, Dict, List, Tuple
 
@@ -76,14 +77,14 @@ def evaluate(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     log.info("Starting testing!")
     # for predictions use trainer.predict(...)
-    predictions = trainer.predict(model=model, datamodule=datamodule, ckpt_path=cfg.ckpt_path)
-    log.info("Creating submission file!")
-    test_df = pd.read_csv(os.path.join(cfg.data_dir, "test.csv"))
-    my_submission = pd.DataFrame({"ID": test_df.ID, "Class": [p.item() for p in predictions]})
-    my_submission.to_csv(
-        os.path.join(os.path.dirname(cfg.ckpt_path), "submission.csv"), index=False
-    )
-
+    with contextlib.suppress(Exception):
+        predictions = trainer.predict(model=model, datamodule=datamodule, ckpt_path=cfg.ckpt_path)
+        log.info("Creating submission file!")
+        test_df = pd.read_csv(os.path.join(cfg.data_dir, "test.csv"))
+        my_submission = pd.DataFrame({"ID": test_df.ID, "Class": [p.item() for p in predictions]})
+        my_submission.to_csv(
+            os.path.join(os.path.dirname(cfg.ckpt_path), "submission.csv"), index=False
+        )
     metric_dict = trainer.callback_metrics
 
     return metric_dict, object_dict

@@ -1,3 +1,4 @@
+import contextlib
 from typing import Any, Dict, List, Optional, Tuple
 
 import hydra
@@ -107,21 +108,23 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
             trainer.validate(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
             log.info(f"Best ckpt path: {ckpt_path}")
 
-            # predictions of each model
-            import os
+            with contextlib.suppress(Exception):
+                # predictions of each model
+                import os
 
-            import pandas as pd
+                import pandas as pd
 
-            predictions = trainer.predict(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
-            log.info("Creating submission file!")
-            test_df = pd.read_csv(os.path.join(cfg.data.data_dir, "test.csv"))
-            my_submission = pd.DataFrame(
-                {"ID": test_df.ID, "Class": [p.item() for p in predictions]}
-            )
-            my_submission.to_csv(
-                os.path.join(os.path.dirname(ckpt_path), f"submission_{k}.csv"), index=False
-            )
-
+                predictions = trainer.predict(
+                    model=model, datamodule=datamodule, ckpt_path=ckpt_path
+                )
+                log.info("Creating submission file!")
+                test_df = pd.read_csv(os.path.join(cfg.data.data_dir, "test.csv"))
+                my_submission = pd.DataFrame(
+                    {"ID": test_df.ID, "Class": [p.item() for p in predictions]}
+                )
+                my_submission.to_csv(
+                    os.path.join(os.path.dirname(ckpt_path), f"submission_{k}.csv"), index=False
+                )
         test_metrics = trainer.callback_metrics
 
         # merge train and test metrics
