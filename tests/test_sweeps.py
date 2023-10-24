@@ -19,7 +19,7 @@ def test_experiments(tmp_path: Path) -> None:
     command = [
         startfile,
         "-m",
-        "experiment=glob(*)",
+        "experiment=example.yaml",  # do not run embryo experiments since they require downloaded data
         "hydra.sweep.dir=" + str(tmp_path),
         "++trainer.fast_dev_run=true",
     ] + overrides

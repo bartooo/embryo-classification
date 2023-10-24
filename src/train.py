@@ -4,8 +4,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import hydra
 import lightning as L
 import rootutils
-import torch
-import wandb
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
@@ -136,6 +134,8 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
             avg_metric_dict = metric_dict.copy()
 
         if k < num_splits - 1:
+            import wandb
+
             wandb.finish()
 
     avg_metric_dict = {key: v / num_splits for key, v in avg_metric_dict.items()}
